@@ -28,20 +28,15 @@ class ReportGenerator:
         summaries = []
         for p in papers:
             if p.analysis:
-                summaries.append(f"- {p.metadata.title}: {p.analysis.one_sentence_summary}") # type: ignore
+                summaries.append(f"- {p.metadata.title}: {p.analysis.one_sentence_summary}")
             else:
                 summaries.append(f"- {p.metadata.title}: {p.metadata.abstract[:200]}...")
-                
-        prompt = f"""
-你是一位资深的 AI 领域学术主编。请根据以下今日精选论文的核心创新点，撰写一段 150 字左右的【头版社论】。
-要求：
-1. 总结今日研究的整体趋势（例如：大家都在关注长上下文、多模态幻觉等）。
-2. 语言风格专业、精炼、具有新闻感。
-3. 直接输出社论正文，不要包含任何多余的问候语或格式。
+        
+        summaries_str = chr(10).join(summaries)
+        
+        # 从 PromptManager 动态获取当前领域的社论 Prompt
+        prompt = config.prompt_manager.get_editorial_prompt(summaries_str)
 
-今日论文概览：
-{chr(10).join(summaries)}
-"""
         try:
             response = self.client.chat.completions.create(
                 model=config.llm.model_name,
@@ -51,15 +46,21 @@ class ReportGenerator:
             return response.choices[0].message.content.strip()
         except Exception as e:
             logger.error(f"Failed to generate editorial: {e}")
-            return "今日 arXiv 抓取了多篇高质量论文，涵盖了多个前沿方向。以下是详细的深度解析。"
+            return "今日抓取了多篇高质量论文，涵盖了多个前沿方向。以下是详细的深度解析。"
 
     def _build_markdown(self, report: DailyReport) -> str:
         """将 DailyReport 对象渲染为 Markdown 字符串"""
         date_str = report.date.strftime("%Y年%m月%d日")
         
-        md = f"""# 🗞️ 【AI 科研早报】 (AI Research Daily)
-**日期**：{date_str} ｜ **期数**：Vol. {report.issue_number} ｜ **领域**：{", ".join(config.arxiv.categories)}
-*“消除信息差，洞悉大模型演进的每一天”*
+        # 动态获取当前领域的报纸标题、口号和分类
+        profile = config.active_profile
+        title = profile.report_title
+        slogan = profile.slogan
+        categories_str = ", ".join(profile.arxiv_categories)
+        
+        md = f"""# 🗞️ 【{title}】
+**日期**：{date_str} ｜ **期数**：Vol. {report.issue_number} ｜ **领域**：{categories_str}
+*“{slogan}”*
 ***
 
 ## 🌍 头版社论：今日学术风向标 (Daily Trend)
@@ -123,26 +124,17 @@ class ReportGenerator:
 
         logger.info(f"Generating report for {len(papers)} papers...")
 
-        # 1. 按照影响力评分（impact_score）降序排序
-        # 如果没有 analysis（比如降级处理的论文），默认给 0 分
         sorted_papers = sorted(
             papers, 
             key=lambda p: p.analysis.impact_score if p.analysis else 0, 
             reverse=True
         )
 
-        # 2. 分配版面
         top_story = sorted_papers[0]
-        # 假设取第 2-4 篇作为深度解析
         featured_papers = sorted_papers[1:4] if len(sorted_papers) > 1 else []
-        # 剩下的作为快讯
         brief_news = sorted_papers[4:] if len(sorted_papers) > 4 else []
 
-        # 3. 生成社论
         editorial = self._generate_editorial(sorted_papers)
-
-        # 4. 构建 Report 对象
-        # 这里简单用一年中的第几天作为期数
         issue_num = datetime.datetime.now().timetuple().tm_yday 
         
         report = DailyReport(
@@ -154,12 +146,12 @@ class ReportGenerator:
             brief_news=brief_news
         )
 
-        # 5. 渲染 Markdown
         md_content = self._build_markdown(report)
 
-        # 6. 保存到文件
+        # 动态生成文件名，包含领域名称
         today_str = datetime.date.today().strftime("%Y-%m-%d")
-        output_file = self.output_dir / f"AI_Daily_Report_{today_str}.md"
+        profile_name = config.active_profile_name.upper()
+        output_file = self.output_dir / f"{profile_name}_Daily_Report_{today_str}.md"
         
         try:
             with open(output_file, "w", encoding="utf-8") as f:
@@ -169,7 +161,3 @@ class ReportGenerator:
         except Exception as e:
             logger.error(f"Failed to save report to {output_file}: {e}")
             return None
-
-# 简单测试逻辑
-if __name__ == "__main__":
-    pass

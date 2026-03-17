@@ -22,12 +22,18 @@ class ArxivClient:
     def _build_query(self) -> str:
         """
         构建查询字符串。
-        例如: (cat:cs.AI OR cat:cs.CL) AND submittedDate:[202403160000 TO 202403170000]
+        从当前激活的领域画像中动态获取分类。
         """
-        # 获取分类部分
-        cat_query = " OR ".join([f"cat:{c}" for c in config.arxiv.categories])
+        # 确保已经激活了某个领域
+        if not config.active_profile:
+            raise RuntimeError("在调用爬虫前，必须先通过 config.set_active_profile() 激活一个领域画像。")
+
+        # 获取当前领域的分类列表
+        categories = config.active_profile.arxiv_categories
+        cat_query = " OR ".join([f"cat:{c}" for c in categories])
+        
         query = f"({cat_query})"
-        logger.info(f"Generated arXiv query: {query}")
+        logger.info(f"Generated arXiv query for profile '{config.active_profile_name}': {query}")
         return query
 
     def fetch_today_papers(self) -> List[Paper]:
@@ -37,7 +43,7 @@ class ArxivClient:
         query_str = self._build_query()
         search = arxiv.Search(
             query=query_str,
-            max_results=config.arxiv.max_results_per_day,
+            max_results=config.global_settings.max_results_per_day, # 从全局设置读取
             sort_by=arxiv.SortCriterion.SubmittedDate,
             sort_order=arxiv.SortOrder.Descending
         )
@@ -54,7 +60,7 @@ class ArxivClient:
                     categories=result.categories,
                     primary_category=result.primary_category,
                     published_date=result.published.date(),
-                    pdf_url=result.pdf_url, # type: ignore
+                    pdf_url=result.pdf_url,
                     comment=result.comment
                 )
                 
@@ -70,8 +76,4 @@ class ArxivClient:
 
 # 简单测试逻辑（仅当直接运行此文件时执行）
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    client = ArxivClient()
-    results = client.fetch_today_papers()
-    for p in results[:3]:
-        print(f"[{p.metadata.arxiv_id}] {p.metadata.title}")
+    pass

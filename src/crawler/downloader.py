@@ -14,6 +14,7 @@ class PaperDownloader:
 
     def __init__(self):
         # 伪装成真实的浏览器，并添加 Referer 绕过部分防盗链
+        # 也可以使用 config.global_settings.user_agent
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
             "Accept": "application/pdf",
@@ -42,7 +43,6 @@ class PaperDownloader:
         logger.info(f"Downloading PDF: {paper.metadata.title[:50]}...")
         
         # 核心修复：提取纯净的 ID（去掉 v1, v2 等版本号）
-        # 例如 2603.15619v1 -> 2603.15619
         base_id = paper.metadata.arxiv_id.split('v')[0]
         
         # 准备多个下载源进行尝试
@@ -58,7 +58,6 @@ class PaperDownloader:
                     
                     if response.status_code == 200:
                         # 终极校验：检查下载下来的文件是不是真的 PDF
-                        # PDF 文件的二进制头部必须包含 b"%PDF"
                         if b"%PDF" in response.content[:10]:
                             with open(local_path, "wb") as f:
                                 f.write(response.content)

@@ -3,8 +3,10 @@ import sys
 import time
 from pathlib import Path
 
-# 导入我们编写的所有模块
+# 导入配置管理器
 from src.config_manager import config
+
+# 导入流水线模块
 from src.crawler.arxiv_client import ArxivClient
 from src.analyzer.paper_ranker import PaperRanker
 from src.crawler.downloader import PaperDownloader
@@ -23,11 +25,54 @@ logging.basicConfig(
 )
 logger = logging.getLogger("MainPipeline")
 
+def interactive_menu() -> str:
+    """
+    显示交互式菜单，让用户选择要生成的早报领域。
+    返回选中的 profile_name (如 'ai', 'materials')
+    """
+    print("\n" + "="*50)
+    print(" 🗞️ 欢迎使用 arXiv 多领域科研早报系统")
+    print("="*50)
+    print("请选择您今天想生成的早报领域：\n")
+    
+    # 从配置中动态读取所有可用的画像
+    profiles = list(config.profiles.keys())
+    for i, profile_key in enumerate(profiles, 1):
+        profile_data = config.profiles[profile_key]
+        print(f"  [{i}] {profile_data.display_name}")
+        print(f"      (分类: {', '.join(profile_data.arxiv_categories)})")
+    
+    print("\n  [0] 退出程序")
+    print("-" * 50)
+    
+    while True:
+        try:
+            choice = input("请输入编号并按回车: ").strip()
+            if choice == '0':
+                print("👋 感谢使用，再见！")
+                sys.exit(0)
+                
+            choice_idx = int(choice) - 1
+            if 0 <= choice_idx < len(profiles):
+                selected_profile = profiles[choice_idx]
+                print(f"\n✅ 已选择: {config.profiles[selected_profile].display_name}")
+                return selected_profile
+            else:
+                print("❌ 无效的编号，请重新输入。")
+        except ValueError:
+            print("❌ 请输入有效的数字。")
+        except KeyboardInterrupt:
+            print("\n👋 感谢使用，再见！")
+            sys.exit(0)
+
 def run_daily_pipeline():
     """执行每日科研早报生成流水线"""
     start_time = time.time()
-    logger.info("=== Starting AI Research Daily Pipeline ===")
-    logger.info(f"Target Categories: {config.arxiv.categories}")
+    
+    # 打印当前激活的配置信息
+    logger.info("=== Starting Research Daily Pipeline ===")
+    logger.info(f"Active Profile: {config.active_profile.display_name}")
+    logger.info(f"Target Categories: {config.active_profile.arxiv_categories}")
     logger.info(f"LLM Model: {config.llm.model_name}")
 
     # ---------------------------------------------------------
@@ -72,7 +117,6 @@ def run_daily_pipeline():
     
     if not converted_papers:
         logger.warning("All Marker conversions failed. Proceeding with abstracts only.")
-        # 即使转换失败，我们依然可以基于摘要生成早报（降级处理）
         papers_to_analyze = downloaded_papers 
     else:
         papers_to_analyze = converted_papers
@@ -82,11 +126,7 @@ def run_daily_pipeline():
     # ---------------------------------------------------------
     logger.info("\n--- Phase 5: Deep AI Analysis ---")
     summarizer = PaperSummarizer()
-    # 注意：这里会内部调用 MarkdownCleaner 进行文本清洗
     analyzed_papers = summarizer.analyze_batch(papers_to_analyze)
-    
-    # 即使部分分析失败，我们依然把所有进入此阶段的论文传给生成器
-    # 生成器内部有容错逻辑（if p.analysis: ... else: ...）
 
     # ---------------------------------------------------------
     # 阶段 6: 排版生成 (Generate Daily Report)
@@ -108,10 +148,15 @@ def run_daily_pipeline():
 
 if __name__ == "__main__":
     try:
+        # 1. 启动交互式菜单，获取用户选择
+        selected_profile_name = interactive_menu()
+        
+        # 2. 将用户选择注入到全局配置管理器中
+        config.set_active_profile(selected_profile_name)
+        
+        # 3. 启动流水线
         run_daily_pipeline()
-    except KeyboardInterrupt:
-        logger.info("Pipeline interrupted by user.")
-        sys.exit(0)
+        
     except Exception as e:
         logger.critical(f"Pipeline crashed with unhandled exception: {e}", exc_info=True)
         sys.exit(1)

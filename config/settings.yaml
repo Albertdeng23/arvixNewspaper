@@ -1,2 +1,51 @@
-# 全局配置（API Key、关键词、爬取数量等）
-# 在此处填写你的配置项
+# ==========================================
+# AI 科研早报系统 - 全局配置文件
+# ==========================================
+
+# ------------------------------------------
+# 1. 领域画像配置 (Profiles)
+# ------------------------------------------
+# 你可以在这里自由添加、修改或删除领域。
+# 键名 (如 'ai', 'materials') 必须与 config/prompt_templates.py 中的 PROMPT_REGISTRY 对应。
+profiles:
+  
+  ai:
+    display_name: "人工智能 (AI & ML)"
+    # cs.AI: 人工智能, cs.CL: 计算语言学(NLP), cs.LG: 机器学习
+    arxiv_categories: ["cs.AI", "cs.CL", "cs.LG"]
+    report_title: "AI 科研早报"
+    slogan: "消除信息差，洞悉大模型演进的每一天"
+
+  materials:
+    display_name: "材料科学 (Materials Science)"
+    # cond-mat.mtrl-sci: 材料科学, physics.chem-ph: 化学物理, physics.app-ph: 应用物理
+    arxiv_categories: ["cond-mat.mtrl-sci", "physics.chem-ph", "physics.app-ph"]
+    report_title: "材料科学早报"
+    slogan: "洞悉物质本源，追踪新材料发现的每一天"
+
+  physics:
+    display_name: "理论与实验物理 (Physics)"
+    # quant-ph: 量子物理, hep-th: 高能物理理论, gr-qc: 广义相对论与量子宇宙学
+    arxiv_categories: ["quant-ph", "hep-th", "gr-qc"]
+    report_title: "前沿物理早报"
+    slogan: "探索宇宙法则，见证物理学突破的每一天"
+
+  math:
+    display_name: "现代数学 (Mathematics)"
+    # math.AG: 代数几何, math.NT: 数论, math.AP: 偏微分方程
+    arxiv_categories: ["math.AG", "math.NT", "math.AP"]
+    report_title: "纯粹数学早报"
+    slogan: "追寻逻辑之美，见证数学猜想证明的每一天"
+
+# ------------------------------------------
+# 2. 爬虫与分析全局设置
+# ------------------------------------------
+global_settings:
+  # 每天从 arXiv 抓取的最大论文数量（按时间倒序）
+  max_results_per_day: 50
+  
+  # 经过 AI 初筛后，保留多少篇进行深度分析和排版
+  top_n_selection: 10
+  
+  # 爬虫的 User-Agent 标识
+  user_agent: "ArxivDailyBot/2.0"
