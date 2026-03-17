@@ -1,0 +1,21 @@
+# arXiv API 交互
+arxiv>=2.1.0
+
+# 异步/同步 HTTP 请求 (用于下载 PDF)
+httpx>=0.27.0
+
+# 数据模型与配置管理
+pydantic>=2.6.0
+pydantic-settings>=2.2.0
+python-dotenv>=1.0.1
+
+# 大模型 API 客户端 (兼容 OpenAI, DeepSeek, 硅基流动等)
+openai>=1.14.0
+
+# ==========================================
+# 可选依赖 (强烈建议安装以启用全文深度分析)
+# ==========================================
+# Marker-PDF: 用于将 PDF 高质量转换为 Markdown
+# 注意: 安装此库可能需要下载 PyTorch 及相关 OCR 模型 (约数 GB)
+# 如果你没有 GPU，转换速度会较慢。
+marker-pdf>=0.2.8
