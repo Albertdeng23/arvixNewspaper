@@ -111,15 +111,20 @@ def run_daily_pipeline():
     # ---------------------------------------------------------
     # 阶段 4: 格式转换 (PDF to Markdown via Marker)
     # ---------------------------------------------------------
-    logger.info("\n--- Phase 4: Converting PDFs to Markdown ---")
-    converter = MarkerConverter()
-    converted_papers = converter.convert_batch(downloaded_papers)
-    
-    if not converted_papers:
-        logger.warning("All Marker conversions failed. Proceeding with abstracts only.")
-        papers_to_analyze = downloaded_papers 
+    if config.use_marker_pdf:
+        logger.info("\n--- Phase 4: Converting PDFs to Markdown ---")
+        converter = MarkerConverter()
+        converted_papers = converter.convert_batch(downloaded_papers)
+        
+        if not converted_papers:
+            logger.warning("All Marker conversions failed. Proceeding with abstracts only.")
+            papers_to_analyze = downloaded_papers 
+        else:
+            papers_to_analyze = converted_papers
     else:
-        papers_to_analyze = converted_papers
+        logger.info("\n--- Phase 4: Skipped (USE_MARKER_PDF=False). Using abstracts only. ---")
+        # 直接将下载好的论文传给下一阶段，分析器会自动降级使用摘要
+        papers_to_analyze = downloaded_papers
 
     # ---------------------------------------------------------
     # 阶段 5: 深度分析 (LLM Summarization)

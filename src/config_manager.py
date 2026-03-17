@@ -64,11 +64,13 @@ class AppConfig:
         self.llm = LLMSettings()
         self.debug = os.getenv("DEBUG", "False").lower() == "true"
         
+        # 【新增】：读取是否使用 Marker 的开关，默认为 True
+        self.use_marker_pdf = os.getenv("USE_MARKER_PDF", "True").lower() == "true"
+        
         # 加载 YAML 配置
         self._load_yaml_config()
         
         # 动态状态：当前激活的画像和 PromptManager
-        # 初始为 None，等待 main.py 启动时由用户选择并设置
         self.active_profile_name: str = None
         self.active_profile: ProfileSettings = None
         self.prompt_manager: PromptManager = None
