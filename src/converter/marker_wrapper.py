@@ -32,14 +32,12 @@ class MarkerConverter:
             return False
 
         pdf_path = Path(paper.pdf_path)
-        # 执行命令: marker_single /path/to/file.pdf --output_dir /path/to/output --batch_multiplier 2
-        # 注意：这里可以根据是否有 GPU 调整参数
+        
+        # 【核心修改】：精简命令行参数，适配最新版 marker-pdf
         command = [
             self.marker_cmd,
             str(pdf_path),
-            "--output_dir", str(self.output_root),
-            "--batch_multiplier", "2", # 提高并行度
-            "--max_pages", "30"        # 限制页数防止超长论文卡死
+            "--output_dir", str(self.output_root)
         ]
 
         logger.info(f"Starting Marker conversion for: {paper.metadata.arxiv_id}")
@@ -51,7 +49,7 @@ class MarkerConverter:
                 capture_output=True,
                 text=True,
                 check=True,
-                timeout=300 # 单篇论文转换上限 5 分钟
+                timeout=600 # 转换全文可能比较慢，把超时时间放宽到 10 分钟
             )
             
             expected_md = self._get_md_output_path(paper.pdf_path)
